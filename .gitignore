@@ -1,0 +1,40 @@
+# ==== Environment variables (SABSE IMPORTANT) ====
+.env
+.env.local
+.env.production
+.env.*.local
+client/.env
+server/.env
+ai-service/.env
+
+# ==== Node.js / React (client + server) ====
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+.npm
+
+# ==== Python (ai-service) ====
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.uv/
+
+# ==== Editor / OS files ====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ==== Vite build cache ====
+.vite/
+
+# ==== Misc ====
+*.pem
+.cache/
