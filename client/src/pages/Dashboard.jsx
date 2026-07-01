@@ -5,6 +5,7 @@ import api from '../lib/api';
 import ResumeUploader from '../components/ResumeUploader';
 import SkillGapCard from '../components/SkillGapCard';
 import SomuChat from '../components/SomuChat';
+import VoiceRecorder from '../components/VoiceRecorder';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -12,26 +13,30 @@ export default function Dashboard() {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Voice state added
+  const [showVoice, setShowVoice] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) { navigate('/'); return; }
+    if (!token) { 
+      navigate('/'); 
+      return; 
+    }
 
     api.get('/auth/me')
-      .then(res => { setUser(res.data); setLoading(false); })
-      .catch(() => { localStorage.removeItem('token'); navigate('/'); });
+      .then(res => { 
+        setUser(res.data); 
+        setLoading(false); 
+      })
+      .catch(() => { 
+        localStorage.removeItem('token'); 
+        navigate('/'); 
+      });
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/');
-  };
-
-  const handleVoiceClick = () => {
-    toast('Voice feature coming soon! 🎤', {
-      icon: '🚀',
-      id: 'voice-toast',
-      duration: 2000
-    });
   };
 
   if (loading) return (
@@ -56,15 +61,24 @@ export default function Dashboard() {
           <div className="w-9 h-9 bg-gradient-to-br from-violet-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/25">
             <span className="text-white font-bold text-sm">CL</span>
           </div>
+
           <span className="text-xl font-bold bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
             CareerLens AI
           </span>
         </div>
+
         <div className="flex items-center gap-4">
           {user?.avatar && (
-            <img src={user.avatar} className="w-8 h-8 rounded-full ring-2 ring-violet-500/30" />
+            <img 
+              src={user.avatar} 
+              className="w-8 h-8 rounded-full ring-2 ring-violet-500/30" 
+            />
           )}
-          <span className="text-gray-300 font-medium text-sm">{user?.name}</span>
+
+          <span className="text-gray-300 font-medium text-sm">
+            {user?.name}
+          </span>
+
           <button
             onClick={handleLogout}
             className="text-gray-500 hover:text-red-400 text-sm transition px-3 py-1.5 rounded-lg hover:bg-red-500/10"
@@ -81,6 +95,7 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-white mb-2">
             Welcome back, {user?.name?.split(' ')[0]}! 👋
           </h1>
+
           <p className="text-gray-500">
             Upload your resume to get AI-powered skill gap analysis
           </p>
@@ -92,20 +107,44 @@ export default function Dashboard() {
             <div className="w-10 h-10 bg-violet-500/20 rounded-xl flex items-center justify-center text-xl">
               🎤
             </div>
+
             <div>
-              <h3 className="font-semibold text-white mb-0.5">Voice Resume Upload</h3>
+              <h3 className="font-semibold text-white mb-0.5">
+                Voice Resume Upload
+              </h3>
+
               <p className="text-sm text-gray-500">
                 Speak your experience — AI will analyze it instantly
               </p>
             </div>
           </div>
+
+          {/* ✅ Toggle Voice Recorder */}
           <button
-            onClick={handleVoiceClick}
+            onClick={() => setShowVoice(!showVoice)}
             className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-xl transition shadow-lg shadow-violet-500/25 whitespace-nowrap"
           >
-            Try Voice →
+            {showVoice ? 'Close Voice' : 'Try Voice →'}
           </button>
         </div>
+
+        {/* ✅ Voice Recorder Section */}
+        {showVoice && (
+          <div className="bg-white/3 border border-white/8 rounded-2xl p-6 mb-6 backdrop-blur-sm">
+            <h3 className="text-white font-semibold mb-4">
+              🎤 Voice Resume
+            </h3>
+
+            <VoiceRecorder
+              onAnalysisComplete={(data) => {
+                setAnalysis(data);
+                setShowVoice(false);
+
+                toast.success('Voice analysis completed!');
+              }}
+            />
+          </div>
+        )}
 
         {/* Upload Section */}
         {!analysis && (
@@ -113,9 +152,11 @@ export default function Dashboard() {
             <h2 className="text-lg font-semibold text-white mb-2">
               📄 Upload Your Resume
             </h2>
+
             <p className="text-gray-500 text-sm mb-6">
               PDF format only · Max 5MB · Analysis takes ~15 seconds
             </p>
+
             <ResumeUploader onAnalysisComplete={setAnalysis} />
           </div>
         )}
@@ -123,10 +164,12 @@ export default function Dashboard() {
         {/* Results Section */}
         {analysis && (
           <div className="space-y-6">
+
             <div className="bg-white/3 border border-white/8 rounded-2xl p-6 backdrop-blur-sm">
               <h2 className="text-lg font-semibold text-white mb-4">
                 ✅ Skills Found in Your Resume
               </h2>
+
               <div className="flex flex-wrap gap-2">
                 {analysis.parsedSkills?.length > 0 ? (
                   analysis.parsedSkills.map(skill => (
@@ -138,7 +181,9 @@ export default function Dashboard() {
                     </span>
                   ))
                 ) : (
-                  <p className="text-gray-500 text-sm">No skills detected</p>
+                  <p className="text-gray-500 text-sm">
+                    No skills detected
+                  </p>
                 )}
               </div>
             </div>
@@ -148,9 +193,14 @@ export default function Dashboard() {
                 <h2 className="text-lg font-semibold text-white">
                   🎯 Skill Gap Analysis by Company
                 </h2>
+
                 <div className="grid grid-cols-2 gap-4">
                   {analysis.skillGapAnalysis.map((item, i) => (
-                    <SkillGapCard key={i} analysis={item} company={item.company} />
+                    <SkillGapCard
+                      key={i}
+                      analysis={item}
+                      company={item.company}
+                    />
                   ))}
                 </div>
               </>
