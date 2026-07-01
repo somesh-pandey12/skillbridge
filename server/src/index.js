@@ -20,6 +20,7 @@ app.use(passport.initialize());
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/resume', require('./routes/resume'));
+app.use('/api/jobs', require('./routes/jobs'));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
