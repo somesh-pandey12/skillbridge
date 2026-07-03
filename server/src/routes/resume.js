@@ -60,6 +60,21 @@ router.post('/upload', auth, upload.single('resume'), async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+  
+// Skill gap analysis
+router.post('/skill-gap', auth, async (req, res) => {
+  try {
+    const { candidateSkills, jobRequirements } = req.body;
+    const aiResponse = await axios.post(
+      `${process.env.AI_SERVICE_URL}/api/skill-gap`,
+      { candidateSkills, jobRequirements },
+      { timeout: 30000 }
+    );
+    res.json(aiResponse.data);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // ─── Voice / Text Analyze ───
 router.post('/analyze-text', auth, async (req, res) => {
