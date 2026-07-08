@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from services.groq_service import analyze_skill_gap
+from services.vector_service import upsert_job, upsert_jobs_bulk, find_matching_jobs
 import os
 from groq import Groq
 
@@ -201,5 +202,110 @@ Keep responses under 150 words unless detailed explanation is needed."""
 
         return {"reply": completion.choices[0].message.content}
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────
+# NEW: Pinecone job-matching endpoints (this was the missing 20%)
+# ─────────────────────────────────────────────────────────────
+
+@router.post("/index-job")
+async def index_job(data: dict):
+    """
+    Call this once per job whenever a job is created/seeded on the Node side.
+    Embeds required_skills into Pinecone with type="job" so it becomes
+    discoverable by /match-jobs.
+    """
+    try:
+        job_id = data.get("jobId")
+        skills = data.get("skills", [])
+        if not job_id:
+            raise HTTPException(status_code=400, detail="jobId is required")
+        if not skills:
+            raise HTTPException(status_code=400, detail="skills list is required")
+
+        # NOTE: "type" is reserved for the Pinecone filter ("job" vs "resume").
+        # The job's own type (Full-time/Internship/etc) is stored as "jobType" instead.
+        metadata = {
+            "company": data.get("company", ""),
+            "role": data.get("role", ""),
+            "location": data.get("location", ""),
+            "jobType": data.get("jobType", "")
+        }
+
+        vector_id = upsert_job(job_id, " ".join(skills), metadata)
+        return {"status": "indexed", "jobId": job_id, "vectorId": vector_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/index-jobs")
+async def index_jobs_bulk(data: dict):
+    """
+    Bulk version — pass {"jobs": [{jobId, skills, company, role, location, jobType}, ...]}
+    Used for re-indexing everything at once (e.g. after a fresh /jobs/seed).
+    """
+    try:
+        jobs = data.get("jobs", [])
+        if not jobs:
+            raise HTTPException(status_code=400, detail="jobs list is required")
+
+        payload = []
+        for j in jobs:
+            if not j.get("jobId") or not j.get("skills"):
+                continue
+            payload.append({
+                "jobId": j["jobId"],
+                "skills_text": " ".join(j["skills"]),
+                "metadata": {
+                    "company": j.get("company", ""),
+                    "role": j.get("role", ""),
+                    "location": j.get("location", ""),
+                    "jobType": j.get("jobType", "")
+                }
+            })
+
+        indexed_count = upsert_jobs_bulk(payload)
+        return {"status": "indexed", "count": indexed_count}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/match-jobs")
+async def match_jobs(data: dict):
+    """
+    Given a candidate's skills, returns the top-k semantically closest jobs
+    from Pinecone (jobId + similarity score + light metadata).
+    Node then hydrates these jobIds against MongoDB for full job details.
+    """
+    try:
+        skills = data.get("skills", [])
+        top_k = int(data.get("top_k", 5))
+        if not skills:
+            raise HTTPException(status_code=400, detail="skills list is required")
+
+        matches = find_matching_jobs(" ".join(skills), top_k=top_k)
+
+        return {
+            "matches": [
+                {
+                    "jobId": m.metadata.get("jobId") if m.metadata else m.id.replace("job_", ""),
+                    "score": round(float(m.score), 4),
+                    "company": (m.metadata or {}).get("company", ""),
+                    "role": (m.metadata or {}).get("role", "")
+                }
+                for m in matches
+            ]
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

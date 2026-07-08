@@ -12,7 +12,13 @@ const ResumeSchema = new mongoose.Schema({
     missingSkills: [String],
     matchScore: Number
   }],
-  vectorId: String    // Pinecone vector ID
+  matchingJobs: [{
+    jobId: String,
+    score: Number,
+    company: String,
+    role: String
+  }],
+  vectorId: String   
 }, { timestamps: true });
 
 module.exports = mongoose.model('Resume', ResumeSchema);

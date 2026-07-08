@@ -1,4 +1,6 @@
+const axios = require('axios');
 const Job = require('../models/Job');
+const Resume = require('../models/Resume');
 
 // ─── Get all jobs ───
 exports.getAllJobs = async (req, res) => {
@@ -20,8 +22,52 @@ exports.getJobById = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+exports.getMatchedJobs = async (req, res) => {
+  try {
+    const resume = await Resume.findOne({
+      _id: req.params.resumeId,
+      userId: req.user._id
+    });
 
-// ─── Seed sample jobs — top Indian + India-hiring companies (testing ke liye) ───
+    if (!resume) return res.status(404).json({ message: 'Resume not found' });
+    if (!resume.parsedSkills?.length) {
+      return res.status(400).json({ message: 'Resume has no parsed skills to match against' });
+    }
+
+    let matches;
+    try {
+      const aiResponse = await axios.post(
+        `${process.env.AI_SERVICE_URL}/api/match-jobs`,
+        { skills: resume.parsedSkills, top_k: 10 },
+        { timeout: 15000 }
+      );
+      matches = aiResponse.data.matches || [];
+    } catch (err) {
+      console.error('Live match-jobs call failed, falling back to stored matches:', err.message);
+      matches = resume.matchingJobs || [];
+    }
+
+    if (!matches.length) return res.json([]);
+
+    const jobIds = matches.map(m => m.jobId).filter(Boolean);
+    const jobs = await Job.find({ _id: { $in: jobIds } });
+    const jobMap = new Map(jobs.map(j => [j._id.toString(), j]));
+
+    // preserve Pinecone's relevance order and attach the similarity score
+    const results = matches
+      .map(m => {
+        const job = jobMap.get(m.jobId);
+        if (!job) return null;
+        return { ...job.toObject(), matchScore: m.score };
+      })
+      .filter(Boolean);
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.seedJobs = async (req, res) => {
   try {
     await Job.deleteMany({});
@@ -59,6 +105,27 @@ exports.seedJobs = async (req, res) => {
       { title: 'Software Engineer', company: 'Adobe', location: 'Noida', type: 'Full-time', required_skills: ['C++', 'Java', 'Data Structures', 'System Design'], description: 'Build Adobe Creative Cloud products.', salary: '20-35 LPA' },
       { title: 'ML Engineer Intern', company: 'Sprinklr', location: 'Gurugram', type: 'Internship', required_skills: ['Python', 'Machine Learning', 'NLP', 'SQL'], description: 'Work on customer experience AI products.', salary: '40-60k/month stipend' }
     ]);
+    try {
+      const payload = {
+        jobs: jobs.map(j => ({
+          jobId: j._id.toString(),
+          skills: j.required_skills,
+          company: j.company,
+          role: j.title,
+          location: j.location,
+          jobType: j.type
+        }))
+      };
+      const indexResponse = await axios.post(
+        `${process.env.AI_SERVICE_URL}/api/index-jobs`,
+        payload,
+        { timeout: 60000 }
+      );
+      console.log(`Pinecone indexing: ${indexResponse.data.count} jobs indexed`);
+    } catch (err) {
+      console.error('Pinecone job indexing failed (non-fatal):', err.message);
+    }
+
     res.json({ message: `${jobs.length} jobs seeded`, jobs });
   } catch (err) {
     res.status(500).json({ message: err.message });

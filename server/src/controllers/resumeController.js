@@ -30,6 +30,7 @@ exports.uploadResume = async (req, res) => {
       experience: aiResponse.data.experience || [],
       education: aiResponse.data.education || [],
       vectorId: aiResponse.data.vectorId || '',
+      matchingJobs: aiResponse.data.matchingJobs || [],
       skillGapAnalysis: []
     });
 
@@ -38,6 +39,7 @@ exports.uploadResume = async (req, res) => {
       parsedSkills: resume.parsedSkills,
       experience: resume.experience,
       education: resume.education,
+      matchingJobs: resume.matchingJobs,
       skillGapAnalysis: resume.skillGapAnalysis
     });
   } catch (err) {
@@ -91,6 +93,7 @@ exports.analyzeText = async (req, res) => {
       experience: aiResponse.data.experience || [],
       education: aiResponse.data.education || [],
       vectorId: aiResponse.data.vectorId || '',
+      matchingJobs: aiResponse.data.matchingJobs || [],
       skillGapAnalysis: []
     });
 
@@ -99,6 +102,7 @@ exports.analyzeText = async (req, res) => {
       parsedSkills: resume.parsedSkills,
       experience: resume.experience,
       education: resume.education,
+      matchingJobs: resume.matchingJobs,
       skillGapAnalysis: resume.skillGapAnalysis
     });
   } catch (err) {

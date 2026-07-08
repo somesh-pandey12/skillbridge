@@ -6,11 +6,13 @@ const passport = require('passport');
 const session = require('express-session');
 const connectDB = require('./config/db');
 require('./config/passport');
+const { generalLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
 // Connect to MongoDB
 connectDB();
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors({ 
@@ -25,6 +27,7 @@ app.use(session({
   saveUninitialized: false
 }));
 app.use(passport.initialize());
+app.use('/api', generalLimiter);
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

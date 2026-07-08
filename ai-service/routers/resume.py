@@ -1,10 +1,30 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from services.parser_service import extract_text_from_pdf
 from services.groq_service import parse_resume_with_ai
-from services.vector_service import upsert_resume
+from services.vector_service import upsert_resume, find_matching_jobs
 import uuid
 
 router = APIRouter()
+
+
+def _get_matching_jobs(skills: list, top_k: int = 5) -> list:
+    """Non-fatal helper: if Pinecone/matching fails, return [] instead of breaking resume parsing."""
+    if not skills:
+        return []
+    try:
+        matches = find_matching_jobs(" ".join(skills), top_k=top_k)
+        return [
+            {
+                "jobId": m.metadata.get("jobId") if m.metadata else m.id.replace("job_", ""),
+                "score": round(float(m.score), 4),
+                "company": (m.metadata or {}).get("company", ""),
+                "role": (m.metadata or {}).get("role", "")
+            }
+            for m in matches
+        ]
+    except Exception as e:
+        print(f"Job matching error (non-fatal): {e}")
+        return []
 
 
 @router.post("/parse-resume")
@@ -35,21 +55,24 @@ async def parse_resume(file: UploadFile = File(...)):
         print(f"Parsed skills: {parsed.get('skills', [])}")
 
         resume_id = str(uuid.uuid4())
-        skills_text = " ".join(parsed.get("skills", []))
+        skills = parsed.get("skills", [])
+        skills_text = " ".join(skills)
 
         try:
             upsert_resume(resume_id, skills_text)
         except Exception as e:
             print(f"Pinecone error (non-fatal): {e}")
 
+        matching_jobs = _get_matching_jobs(skills)
+
         return {
             "resumeId": resume_id,
             "originalText": raw_text[:500],
-            "parsedSkills": parsed.get("skills", []),
+            "parsedSkills": skills,
             "experience": parsed.get("experience", []),
             "education": parsed.get("education", []),
             "vectorId": resume_id,
-            "matchingJobs": []
+            "matchingJobs": matching_jobs
         }
 
     except HTTPException:
@@ -68,19 +91,23 @@ async def analyze_text(data: dict):
 
         parsed = await parse_resume_with_ai(text)
         resume_id = str(uuid.uuid4())
+        skills = parsed.get("skills", [])
 
         try:
-            upsert_resume(resume_id, " ".join(parsed.get("skills", [])))
+            upsert_resume(resume_id, " ".join(skills))
         except Exception as e:
             print(f"Pinecone error (non-fatal): {e}")
+
+        matching_jobs = _get_matching_jobs(skills)
 
         return {
             "resumeId": resume_id,
             "originalText": text[:500],
-            "parsedSkills": parsed.get("skills", []),
+            "parsedSkills": skills,
             "experience": parsed.get("experience", []),
             "education": parsed.get("education", []),
-            "vectorId": resume_id
+            "vectorId": resume_id,
+            "matchingJobs": matching_jobs
         }
 
     except HTTPException:

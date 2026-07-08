@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const auth = require('../middleware/auth');
 const axios = require('axios');
+const { aiLimiter } = require('../middleware/rateLimiter');
 
-// Somu chatbot
-router.post('/somu', auth, async (req, res) => {
+router.post('/somu', auth, aiLimiter, async (req, res) => {
   try {
     const { message, history } = req.body;
     const aiResponse = await axios.post(
@@ -17,8 +17,7 @@ router.post('/somu', auth, async (req, res) => {
   }
 });
 
-// Interview questions
-router.post('/interview-questions', auth, async (req, res) => {
+router.post('/interview-questions', auth, aiLimiter, async (req, res) => {
   try {
     const { company, level } = req.body;
     const aiResponse = await axios.post(
@@ -32,8 +31,7 @@ router.post('/interview-questions', auth, async (req, res) => {
   }
 });
 
-// Interview feedback
-router.post('/interview-feedback', auth, async (req, res) => {
+router.post('/interview-feedback', auth, aiLimiter, async (req, res) => {
   try {
     const { question, answer, company } = req.body;
     const aiResponse = await axios.post(
@@ -47,8 +45,7 @@ router.post('/interview-feedback', auth, async (req, res) => {
   }
 });
 
-// Cover letter
-router.post('/cover-letter', auth, async (req, res) => {
+router.post('/cover-letter', auth, aiLimiter, async (req, res) => {
   try {
     const aiResponse = await axios.post(
       `${process.env.AI_SERVICE_URL}/api/cover-letter`,

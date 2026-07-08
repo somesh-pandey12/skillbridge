@@ -2,6 +2,7 @@ const router = require('express').Router();
 const passport = require('passport');
 const auth = require('../middleware/auth');
 const authController = require('../controllers/authController');
+const { authLimiter } = require('../middleware/rateLimiter');
 
 // Google OAuth
 router.get('/google',
@@ -13,9 +14,8 @@ router.get('/google/callback',
   authController.googleCallback
 );
 
-// Email/Password Register
-router.post('/register', authController.register);
-router.post('/login', authController.login);
+router.post('/register', authLimiter, authController.register);
+router.post('/login', authLimiter, authController.login);
 router.get('/me', auth, authController.getMe);
 
 module.exports = router;
