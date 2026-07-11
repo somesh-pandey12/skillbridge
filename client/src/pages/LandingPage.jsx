@@ -11,8 +11,9 @@ export default function LandingPage() {
   const [showPass, setShowPass] = useState(false);
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:5000/api/auth/google';
-  };
+    const serverUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    window.location.href = `${serverUrl}/api/auth/google`;
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
