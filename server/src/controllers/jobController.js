@@ -11,8 +11,6 @@ exports.getAllJobs = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-// ─── Get single job by id ───
 exports.getJobById = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id);
@@ -53,7 +51,6 @@ exports.getMatchedJobs = async (req, res) => {
     const jobs = await Job.find({ _id: { $in: jobIds } });
     const jobMap = new Map(jobs.map(j => [j._id.toString(), j]));
 
-    // preserve Pinecone's relevance order and attach the similarity score
     const results = matches
       .map(m => {
         const job = jobMap.get(m.jobId);

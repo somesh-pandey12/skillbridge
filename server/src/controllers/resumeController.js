@@ -53,8 +53,6 @@ exports.uploadResume = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-// ─── Skill gap analysis ───
 exports.getSkillGap = async (req, res) => {
   try {
     const { candidateSkills, jobRequirements } = req.body;
@@ -68,8 +66,6 @@ exports.getSkillGap = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-// ─── Voice / Text Analyze ───
 exports.analyzeText = async (req, res) => {
   try {
     const { text } = req.body;
@@ -116,8 +112,6 @@ exports.analyzeText = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-// ─── Get resume by id (only owner's) ───
 exports.getResumeById = async (req, res) => {
   try {
     const resume = await Resume.findOne({
@@ -132,8 +126,6 @@ exports.getResumeById = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-// ─── Get all resumes for logged-in user ───
 exports.getAllResumes = async (req, res) => {
   try {
     const resumes = await Resume.find({ userId: req.user._id })

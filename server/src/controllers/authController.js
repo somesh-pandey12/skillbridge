@@ -2,18 +2,15 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
-// Helper: sign a JWT for a user id
 const signToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-// ─── Google OAuth callback handler ───
 exports.googleCallback = (req, res) => {
   const token = signToken(req.user._id);
   console.log('Google login success, redirecting with token...');
   res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
 };
 
-// ─── Register with email/password ───
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -40,7 +37,6 @@ exports.register = async (req, res) => {
   }
 };
 
-// ─── Login with email/password ───
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -58,8 +54,6 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-// ─── Get logged-in user's profile ───
 exports.getMe = (req, res) => {
   res.json(req.user);
 };
