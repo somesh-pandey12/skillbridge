@@ -20,7 +20,7 @@ exports.uploadResume = async (req, res) => {
     const aiResponse = await axios.post(
       `${process.env.AI_SERVICE_URL}/api/parse-resume`,
       formData,
-      { headers: formData.getHeaders(), timeout: 60000 }
+      { headers: formData.getHeaders(), timeout: 120000 }
     );
 
     const resume = await Resume.create({
@@ -59,7 +59,7 @@ exports.getSkillGap = async (req, res) => {
     const aiResponse = await axios.post(
       `${process.env.AI_SERVICE_URL}/api/skill-gap`,
       { candidateSkills, jobRequirements },
-      { timeout: 30000 }
+      { timeout: 90000 }
     );
     res.json(aiResponse.data);
   } catch (err) {
@@ -79,7 +79,7 @@ exports.analyzeText = async (req, res) => {
     const aiResponse = await axios.post(
       `${process.env.AI_SERVICE_URL}/api/analyze-text`,
       { text },
-      { timeout: 60000 }
+      { timeout: 120000 }
     );
 
     const resume = await Resume.create({
